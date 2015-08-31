@@ -2,6 +2,7 @@ package com.i112358.savemyeyes;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -24,10 +25,15 @@ public class MainActivity extends Activity {
     private Timer m_timer = null;
     private TimerTask m_timerTask = null;
 
+    private float m_fadeSeconds = 1.0f;
+    Intent m_shakeService = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        m_shakeService = new Intent(this, ShakeService.class);
 
         m_contentResolver = getContentResolver();
         m_window = getWindow();
@@ -57,8 +63,18 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onDestroy()
+    {
+        super.onDestroy();
+        this.stopService(m_shakeService);
+    }
+
+    @Override
     public void onResume( ) {
         super.onResume();
+//        this.startService(m_shakeService);
+        this.startService(new Intent(this, ShakeService.class));
+
         m_brightness = 0;
 
         try {
@@ -68,17 +84,25 @@ public class MainActivity extends Activity {
                 public void run() {
                     m_brightness++;
                     android.provider.Settings.System.putInt(m_contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, m_brightness);
-                    Log.i("info", " new brightness is " + m_brightness);
+//                    Log.i("info", " new brightness is " + m_brightness);
                     if ( m_brightness >= 255 ) {
                         Log.i("info", "stop timer");
                         m_timerTask.cancel();
                     }
                 }
             };
-            m_timer.schedule(m_timerTask, 150, 50);
+            m_timer.schedule(m_timerTask, 50, (long)(1000 / 60) );
         } catch ( Exception e ){
 
         }
+    }
+
+    @Override
+    public void onPause()
+    {
+        Log.i("info", "MainActivity onPause");
+        super.onPause();
+        this.stopService(new Intent(this, ShakeService.class));
     }
 
     @Override
