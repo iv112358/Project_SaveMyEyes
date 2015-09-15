@@ -1,11 +1,11 @@
 package com.i112358.savemyeyes;
 
 import android.app.Activity;
-import android.content.ContentResolver;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,17 +15,16 @@ import android.widget.TextView;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 public class MainActivity extends Activity {
 
+    public static MainActivity Get() { return activity; }
     private static MainActivity activity;
     private int m_brightness = 255;
-    private ContentResolver m_contentResolver;
     private Timer m_timer = null;
     private TimerTask m_timerTask = null;
-    Intent m_shakeService = null;
-
-    public static MainActivity Get() { return activity;}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,8 +33,11 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         activity = this;
 
-        m_shakeService = new Intent(this, ShakeService.class);
-        m_contentResolver = getContentResolver();
+        if ( !isShakeServiceRunning(ShakeService.class) ) {
+            this.startService(new Intent(this, ShakeService.class));
+        } else {
+            Log.i("info", "ShakeService already running");
+        }
 
         RelativeLayout linearLayout = (RelativeLayout) findViewById(R.id.main_layout);
         TextView txt1 = new TextView(MainActivity.this);
@@ -52,15 +54,18 @@ public class MainActivity extends Activity {
     {
         Log.w("info", "MainActivity onDestroy");
         super.onDestroy();
-        this.stopService(m_shakeService);
+//        this.stopService(m_shakeService);
     }
 
     @Override
     public void onResume( ) {
         Log.w("info", "MainActivity onResume");
         super.onResume();
-//        this.startService(m_shakeService);
-        this.startService(new Intent(this, ShakeService.class));
+        if ( !isShakeServiceRunning(ShakeService.class) ) {
+            this.startService(new Intent(this, ShakeService.class));
+        } else {
+            Log.i("info", "ShakeService already running");
+        }
 
         m_brightness = 0;
     }
@@ -70,7 +75,7 @@ public class MainActivity extends Activity {
     {
         Log.w("info", "MainActivity onPause");
         super.onPause();
-        this.stopService(new Intent(this, ShakeService.class));
+//        this.stopService(new Intent(this, ShakeService.class));
     }
 
     @Override
@@ -78,24 +83,18 @@ public class MainActivity extends Activity {
     {
         Log.w("info", "MainActivity onStop");
         super.onStop();
-        this.stopService(new Intent(this, ShakeService.class));
+//        this.stopService(new Intent(this, ShakeService.class));
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
@@ -103,44 +102,60 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void ChangeBrightness()
-    {
+    public void ChangeBrightness() {
         Log.i("info", "MainActivity ChangeBrightness");
-        try
-        {
-            m_brightness = android.provider.Settings.System.getInt(m_contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS);
-        }
-        catch (Settings.SettingNotFoundException e)
-        {
-            e.printStackTrace();
-        }
-        Log.i("info", "Brightness is " + m_brightness);
-        final boolean directionUp = ( m_brightness <= 10 ) ? true : false;
 
         try {
+            m_brightness = android.provider.Settings.System.getInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS);
+            final boolean directionUp = (m_brightness <= 10);
+
             m_timer = new Timer();
-            m_timerTask= new TimerTask() {
+            m_timerTask = new TimerTask() {
                 @Override
                 public void run() {
-                    android.provider.Settings.System.putInt(m_contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, m_brightness);
+                    android.provider.Settings.System.putInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS, m_brightness);
                     if ( directionUp ) {
                         m_brightness++;
-                        if ( m_brightness >= 255 ) {
+                        if (m_brightness >= 255) {
                             Log.i("info", "stop timer");
-                            m_timerTask.cancel();
+                            m_timer.cancel();
+                            m_timerTask = null;
+                            m_timer = null;
                         }
                     } else {
                         m_brightness--;
-                        if ( m_brightness <= 0 ) {
+                        if (m_brightness <= 0) {
                             Log.i("info", "stop timer");
-                            m_timerTask.cancel();
+                            m_timer.cancel();
+                            m_timerTask = null;
+                            m_timer = null;
                         }
                     }
                 }
             };
-            m_timer.schedule(m_timerTask, 50, (long)(1000 / 60) );
-        } catch ( Exception e ) {
-
+            m_timer.scheduleAtFixedRate(m_timerTask, 50, (long) (1000 / 60));
+//            m_timer.schedule(m_timerTask, 50, (long) (1000 / 60));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    public boolean checkIfShakeBrightnessChanging()
+    {
+        if ( m_timer != null || m_timerTask != null ) {
+            Log.i("info", "timer or timerTask exists");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isShakeServiceRunning(Class<ShakeService> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

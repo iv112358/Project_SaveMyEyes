@@ -12,14 +12,12 @@ import java.util.ArrayList;
 
 public class ShakeService extends Service implements SensorEventListener {
 
-    private final int ACCELERATION_ACCURACY = 10;
-    private final float ACCELERATION_STRENGTH = 15;
+    private final float ACCELERATION_STRENGTH = 13;
     private final float ACCELERATION_TRIGGER = 12;
     private SensorManager m_sensorManager;
     private float m_lastAcceleration = SensorManager.GRAVITY_EARTH;
     private ArrayList<Float> m_accelerationList = new ArrayList<Float>();
     private long m_lastChangeTime = -1;
-    private long m_timeOut = -1;
 
     @Override
     public IBinder onBind(Intent intent)
@@ -35,6 +33,7 @@ public class ShakeService extends Service implements SensorEventListener {
     public void onCreate()
     {
         super.onCreate();
+
     }
 
     public void onDestroy()
@@ -47,9 +46,9 @@ public class ShakeService extends Service implements SensorEventListener {
     {
         super.onStartCommand(intent, flags, startId);
         m_sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        m_sensorManager.registerListener(this, m_sensorManager .getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
+        m_sensorManager.registerListener(this, m_sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
 
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     @Override
@@ -84,11 +83,23 @@ public class ShakeService extends Service implements SensorEventListener {
                 avarege /= m_accelerationList.size();
                 Log.i("info", " avarege shake is " + avarege);
                 if ( avarege > ACCELERATION_STRENGTH ) {
-                    Log.i("info", "recorded " + m_accelerationList.size() + " amaunts");
-                    MainActivity.Get().ChangeBrightness();
+
+//                    Intent dialogIntent = new Intent(this, MainActivity.class);
+//                    dialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                    startActivity(dialogIntent);
+
+                    /*
+                    Intent myIntent = new Intent(getBaseContext(), MainActivity.class);
+                    getApplication().startActivity(myIntent);
+                    */
+                    if ( !MainActivity.Get().checkIfShakeBrightnessChanging() ) {
+                        Log.i("info", "recorded " + m_accelerationList.size() + " amaunts");
+                        MainActivity.Get().ChangeBrightness();
+                    }
                 }
                 m_lastChangeTime = -1;
                 m_accelerationList.clear();
+
             }
         }
 //        Log.i("info", " current shake is " + currentAcceleration);
@@ -96,7 +107,7 @@ public class ShakeService extends Service implements SensorEventListener {
 
     protected void onResume()
     {
-        m_sensorManager.registerListener(this,m_sensorManager .getDefaultSensor(Sensor.TYPE_ACCELEROMETER),SensorManager.SENSOR_DELAY_UI);
+        m_sensorManager.registerListener(this, m_sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
     }
 
     protected void onPause()
