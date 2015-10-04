@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/shake_service"
-        android:id="@+id/switch1"
+        android:id="@+id/shakeServiceSwitcher"
         android:checked="false"
         android:layout_below="@+id/textView"
         android:layout_alignParentRight="true"

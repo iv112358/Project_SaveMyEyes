@@ -4,13 +4,16 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
+import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
@@ -18,18 +21,38 @@ public class MainActivity extends Activity {
     public static MainActivity Get() { return activity; }
     private static MainActivity activity;
 
+    private Switch m_shakeSwitcher = null;
+    private SharedPreferences m_preferences = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.w("info", "MainActivity onCreate");
         super.onCreate(savedInstanceState);
+        Log.w("info", "MainActivity onCreate");
         setContentView(R.layout.activity_main);
         activity = this;
 
-        if ( !isShakeServiceRunning(ShakeService.class) ) {
-            this.startService(new Intent(this, ShakeService.class));
-        } else {
-            Log.i("info", "ShakeService already running");
-        }
+        m_preferences = getPreferences(Context.MODE_PRIVATE);
+
+        final boolean startShake = m_preferences.getBoolean("shakeServiceStatus", false);
+        changeShakeServiceState(startShake);
+        m_shakeSwitcher = (Switch)findViewById(R.id.shakeServiceSwitcher);
+        m_shakeSwitcher.setChecked(startShake);
+        m_shakeSwitcher.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged( CompoundButton buttonView, boolean isChecked ) {
+                Log.i("info", "status is " + startShake);
+                SharedPreferences.Editor editor = m_preferences.edit();
+                editor.putBoolean("shakeServiceStatus", isChecked);
+                editor.commit();
+                changeShakeServiceState(isChecked);
+//                if ( isChecked ) {
+//                    Log.i("info", "swither ON");
+//                }else{
+//                    Log.i("info", "swither OFF");
+//                }
+                Log.i("info", "status is " + m_preferences.getBoolean("shakeServiceStatus", false));
+            }
+        });
 
         RelativeLayout linearLayout = (RelativeLayout) findViewById(R.id.main_layout);
         TextView txt1 = new TextView(MainActivity.this);
@@ -51,13 +74,16 @@ public class MainActivity extends Activity {
 
     @Override
     public void onResume( ) {
-        Log.w("info", "MainActivity onResume");
         super.onResume();
+        Log.w("info", "MainActivity onResume");
+
+        /*
         if ( !isShakeServiceRunning(ShakeService.class) ) {
             this.startService(new Intent(this, ShakeService.class));
         } else {
             Log.i("info", "ShakeService already running");
         }
+        */
     }
 
     @Override
@@ -75,6 +101,8 @@ public class MainActivity extends Activity {
         super.onStop();
 //        this.stopService(new Intent(this, ShakeService.class));
     }
+
+    ////////////////////////////////
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -100,5 +128,18 @@ public class MainActivity extends Activity {
             }
         }
         return false;
+    }
+
+    private void changeShakeServiceState( final boolean isStart )
+    {
+        if ( isStart ) {
+            if ( !isShakeServiceRunning(ShakeService.class) ) {
+                Log.i("info", "Start Shake Service");
+                startService(new Intent(this, ShakeService.class));
+            }
+        } else {
+            Log.i("info", "Stop Shake Service");
+            stopService(new Intent(this, ShakeService.class));
+        }
     }
 }

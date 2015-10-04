@@ -10,21 +10,15 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+import android.widget.Toast;
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class ShakeService extends Service implements SensorEventListener {
-
-    private final float ACCELERATION_STRENGTH = 13;
-    private final float ACCELERATION_TRIGGER = 12;
     private float m_lastAcceleration = SensorManager.GRAVITY_EARTH;
     private ArrayList<Float> m_accelerationList = new ArrayList<Float>();
     private long m_lastChangeTime = -1;
 
     private int m_brightness = 255;
-    private Timer m_timer = null;
-    private TimerTask m_timerTask = null;
 
     private final Handler m_handler = new Handler();
     private boolean m_directionUp = false;
@@ -43,12 +37,15 @@ public class ShakeService extends Service implements SensorEventListener {
     public void onCreate()
     {
         super.onCreate();
-
     }
 
     public void onDestroy()
     {
         super.onDestroy();
+
+        SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        sensorManager.unregisterListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
+        Toast.makeText(this, "ShakeService Stopped", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -58,6 +55,7 @@ public class ShakeService extends Service implements SensorEventListener {
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
 
+        Toast.makeText(this, "ShakeService Started", Toast.LENGTH_LONG).show();
         return START_STICKY;
     }
 
@@ -69,15 +67,12 @@ public class ShakeService extends Service implements SensorEventListener {
 
     public void onSensorChanged(SensorEvent event)
     {
-        float x = event.values[0];
-        float y = event.values[1];
-        float z = event.values[2];
-
-        float currentAcceleration = (float) Math.sqrt((double) (x*x + y*y + z*z));
+        float[] sensorValues = event.values.clone();
+        float currentAcceleration = (float) Math.sqrt((Math.pow(sensorValues[0], 2) + Math.pow(sensorValues[1], 2) + Math.pow(sensorValues[2], 2)));
         currentAcceleration = currentAcceleration * 0.9f + m_lastAcceleration * 0.1f;
         m_lastAcceleration = currentAcceleration;
 
-        if ( currentAcceleration > ACCELERATION_TRIGGER ) {
+        if ( currentAcceleration > Float.valueOf(getResources().getString(R.string.ACCELERATION_TRIGGER)) ) {
             if ( m_lastChangeTime < 0 ) {
                 m_lastChangeTime = System.currentTimeMillis();
             }
@@ -86,29 +81,17 @@ public class ShakeService extends Service implements SensorEventListener {
         if ( m_lastChangeTime > 0 ) {
             m_accelerationList.add(currentAcceleration);
             if ( System.currentTimeMillis() - m_lastChangeTime > 1000 ) {
-                float averegeShake = 0.0f;
+                float averageShake = 0.0f;
                 for ( Float elem : m_accelerationList ) {
-                    averegeShake += elem.floatValue();
+                    averageShake += elem;
                 }
-                averegeShake /= m_accelerationList.size();
+                averageShake /= m_accelerationList.size();
 
-                if ( averegeShake > ACCELERATION_STRENGTH ) {
-                    /// With handler
-                    try {
-                        m_brightness = android.provider.Settings.System.getInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS);
-                        m_directionUp = (m_brightness <= 10);
-                    } catch ( Settings.SettingNotFoundException e ) {
-                        e.printStackTrace();
-                    }
-                    m_handler.removeCallbacks(changeBrightness);
-                    m_handler.post(changeBrightness);
-                    /// With handler
-
-                    /// With Timer
-                    //ChangeBrightness();
-                    /// With Timer
+                if ( averageShake > Float.valueOf(getResources().getString(R.string.ACCELERATION_STRENGTH)) ) {
+                    Log.i("info", "ShakeService start change brightness");
+                    ChangeBrightness();
                 } else {
-                    Log.i("info", "Shake harder. " + (ACCELERATION_STRENGTH - averegeShake) + " m/s left");
+                    Log.i("info", "Shake harder. " + (Float.valueOf(getResources().getString(R.string.ACCELERATION_STRENGTH)) - averageShake) + " m/s left");
                 }
                 m_lastChangeTime = -1;
                 m_accelerationList.clear();
@@ -117,46 +100,32 @@ public class ShakeService extends Service implements SensorEventListener {
     }
 
     public void ChangeBrightness() {
-        Log.i("info", "ShakeService ChangeBrightness called");
-
         try {
             m_brightness = android.provider.Settings.System.getInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS);
-            final boolean directionUp = (m_brightness <= 10);
-
-            m_timer = new Timer();
-            m_timerTask = new TimerTask() {
-                @Override
-                public void run() {
-                    if ( directionUp ) {
-                        ++m_brightness;
-                    } else {
-                        --m_brightness;
-                    }
-
-                    android.provider.Settings.System.putInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS, m_brightness);
-
-                    if ( m_brightness <= 0 || m_brightness >= 255 ) {
-                        Log.i("info", "stop timer");
-                        m_timer.cancel();
-                        m_timerTask = null;
-                        m_timer = null;
-                    }
-                }
-            };
-            m_timer.scheduleAtFixedRate(m_timerTask, 50, (long) (1000 / 60));
-//            m_timer.schedule(m_timerTask, 50, (long) (1000 / 60));
-        } catch (Exception e) {
+            m_directionUp = (m_brightness <= 10);
+        } catch ( Settings.SettingNotFoundException e ) {
             e.printStackTrace();
         }
+        m_handler.removeCallbacks(changeBrightness);
+        m_handler.post(changeBrightness);
     }
 
     private Runnable changeBrightness = new Runnable() {
         @Override
         public void run() {
             if ( m_directionUp ) {
-                ++m_brightness;
+                m_brightness+=2;
             } else {
-                --m_brightness;
+                m_brightness-=2;
+            }
+
+            boolean continueChange = true;
+            if ( m_brightness >= 255 ) {
+                m_brightness = 255;
+                continueChange = false;
+            } else if ( m_brightness <= 0 ) {
+                m_brightness = 0;
+                continueChange = false;
             }
 
             try {
@@ -165,11 +134,11 @@ public class ShakeService extends Service implements SensorEventListener {
                 e.printStackTrace();
             }
 
-            if ( m_brightness <= 0 || m_brightness >= 255 ) {
+            if ( continueChange ) {
+                m_handler.postDelayed(this, 11);
+            } else {
                 Log.i("info", "stop handler");
                 m_handler.removeCallbacks(changeBrightness);
-            } else {
-                m_handler.postDelayed(this, 11);
             }
         }
     };
