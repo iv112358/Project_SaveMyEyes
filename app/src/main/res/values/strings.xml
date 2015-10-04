@@ -5,6 +5,8 @@
     <string name="action_settings">Settings</string>
 
     <string name="shake_service">Activate Shake Service</string>
+    <string name="shake_service_start_from">Start from:</string>
+    <string name="shake_service_end_on">End on:</string>
     
     <string name="ACCELERATION_STRENGTH">13.0</string>
     <string name="ACCELERATION_TRIGGER">16.0</string>

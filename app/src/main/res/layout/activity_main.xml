@@ -7,22 +7,41 @@
     android:id="@+id/main_layout"
     android:background="#fff9db">
 
-    <TextView android:text="@string/hello_world" android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/textView"
-        android:layout_marginTop="91dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
-
     <Switch
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/shake_service"
         android:id="@+id/shakeServiceSwitcher"
         android:checked="false"
-        android:layout_below="@+id/textView"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="43dp" />
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="@string/shake_service_start_from"
+        android:id="@+id/shakeStartTime"
+        android:onClick="onFromClick"
+        android:clickable="true"
+        android:layout_below="@+id/shakeServiceSwitcher"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="31dp" />
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="@string/shake_service_end_on"
+        android:id="@+id/shakeEndTime"
+        android:onClick="onFromClick"
+        android:clickable="true"
+        android:layout_below="@+id/shakeStartTime"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
 
 </RelativeLayout>
