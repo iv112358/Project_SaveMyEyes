@@ -1,6 +1,8 @@
 package com.i112358.savemyeyes;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -19,6 +21,8 @@ public class ShakeService extends Service implements SensorEventListener {
     private long m_lastChangeTime = -1;
 
     private int m_brightness = 255;
+    private int m_delay = 0;
+    private int m_direction = 0;
 
     private final Handler m_handler = new Handler();
     private boolean m_directionUp = false;
@@ -37,6 +41,7 @@ public class ShakeService extends Service implements SensorEventListener {
     public void onCreate()
     {
         super.onCreate();
+
     }
 
     public void onDestroy()
@@ -100,12 +105,11 @@ public class ShakeService extends Service implements SensorEventListener {
     }
 
     public void ChangeBrightness() {
-        try {
-            m_brightness = android.provider.Settings.System.getInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS);
-            m_directionUp = (m_brightness <= 10);
-        } catch ( Settings.SettingNotFoundException e ) {
-            e.printStackTrace();
-        }
+        m_brightness = BrightnessController.getCurrentBrightness(getContentResolver());
+        m_delay = BrightnessController.changeToValueInTime(0, 60);
+        m_directionUp = (m_brightness <= 10);
+        m_direction = 1;
+        if ( !m_directionUp ) m_direction = -1;
         m_handler.removeCallbacks(changeBrightness);
         m_handler.post(changeBrightness);
     }
@@ -113,11 +117,7 @@ public class ShakeService extends Service implements SensorEventListener {
     private Runnable changeBrightness = new Runnable() {
         @Override
         public void run() {
-            if ( m_directionUp ) {
-                m_brightness+=2;
-            } else {
-                m_brightness-=2;
-            }
+            m_brightness += m_direction;
 
             boolean continueChange = true;
             if ( m_brightness >= 255 ) {
@@ -128,14 +128,9 @@ public class ShakeService extends Service implements SensorEventListener {
                 continueChange = false;
             }
 
-            try {
-                android.provider.Settings.System.putInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS, m_brightness);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
+            BrightnessController.setBrightness(getContentResolver(), m_brightness);
             if ( continueChange ) {
-                m_handler.postDelayed(this, 11);
+                m_handler.postDelayed(this, m_delay);
             } else {
                 Log.i("info", "stop handler");
                 m_handler.removeCallbacks(changeBrightness);
