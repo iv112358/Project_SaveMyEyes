@@ -2,9 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.i112358.savemyeyes" >
 
-    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="true" />
 
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.GET_TASKS" />
 
     <application
@@ -27,6 +30,29 @@
             android:enabled="true"
             android:exported="true" >
         </service>
+        <service
+            android:name=".ChangeBrightnessService"
+            android:enabled="true"
+            android:exported="true" >
+        </service>
+
+        <receiver
+            android:name=".Alarm"
+            android:enabled="true" >
+            <intent-filter>
+                <action android:name="com.i112358.savemyeyes" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".SetPointsActivity"
+            android:label="@string/title_activity_set_points"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.i112358.savemyeyes.MainActivity" />
+        </activity>
     </application>
 
 </manifest>
