@@ -1,14 +1,9 @@
 package com.i112358.savemyeyes;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -21,6 +16,7 @@ public class ChangeBrightnessService extends Service {
     private int m_brightnessToSet = 0;
 
     public ChangeBrightnessService() {
+        Log.i("info", "ChangeBrightnessService Constructor");
     }
 
     @Override
@@ -33,7 +29,7 @@ public class ChangeBrightnessService extends Service {
     {
         super.onStartCommand(intent, flags, startId);
         m_brightnessCurrent = Utilites.getCurrentBrightness(getContentResolver());
-        m_brightnessToSet = (intent.getIntExtra("brightness", 100) * 255) / 100;
+        m_brightnessToSet = intent.getIntExtra("brightness", 100);
         m_delay = Utilites.evaluateChangeDelay(m_brightnessCurrent, m_brightnessToSet);
         m_direction = Utilites.evaluateChangeDirection(m_brightnessCurrent, m_brightnessToSet);
 
@@ -45,33 +41,37 @@ public class ChangeBrightnessService extends Service {
 
         m_handler.removeCallbacks(changeBrightness);
         m_handler.post(changeBrightness);
-
         return START_STICKY;
     }
 
     private Runnable changeBrightness = new Runnable() {
         @Override
         public void run() {
-            m_brightnessCurrent += m_direction;
-            BrightnessController.setBrightness(getContentResolver(), m_brightnessCurrent);
-
-            if ( m_brightnessCurrent != m_brightnessToSet ) {
-                m_handler.postDelayed(this, m_delay);
-            } else {
+//            Log.i("info", m_brightnessCurrent + "/" + m_brightnessToSet);
+            if ( m_brightnessCurrent == m_brightnessToSet ) {
                 m_handler.removeCallbacks(changeBrightness);
                 gotoNextPoint();
+                Log.i("info", "currentBrightness is " + Utilites.getCurrentBrightness(getContentResolver()));
+                return;
             }
+            m_brightnessCurrent += m_direction;
+            Utilites.setBrightness(getContentResolver(), m_brightnessCurrent);
+            m_handler.postDelayed(this, m_delay);
         }
     };
 
     private void gotoNextPoint()
     {
-        SharedPreferences preferences = getSharedPreferences(getString(R.string.PREFERENCES), MODE_PRIVATE);
-        BrightnessPoint point = BrightnessPointManager.getClosestTimePoint(preferences);
-        if ( point != null ) {
-            Alarm alarm = new Alarm();
-            alarm.setAlarm(this, point);
+        if ( MainActivity.Get() != null ) {
+            MainActivity.Get().setCurrentBrightnessPoint();
         }
+        if ( SetPointsActivity.Get() != null ) {
+            SetPointsActivity.Get().updateSetPointScreen();
+        }
+
+        Intent alarmService = new Intent(this, AlarmService.class);
+        alarmService.putExtra("startNextAlarm", true);
+        startService(alarmService);
         stopSelf();
     }
 }

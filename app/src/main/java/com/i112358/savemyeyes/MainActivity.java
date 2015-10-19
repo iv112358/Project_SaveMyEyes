@@ -2,27 +2,19 @@ package com.i112358.savemyeyes;
 
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.TimePickerDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.TimePicker;
+import android.widget.Toast;
 
 import java.util.Calendar;
-import java.util.TimeZone;
 
 public class MainActivity extends Activity {
 
@@ -33,15 +25,26 @@ public class MainActivity extends Activity {
     private TextView m_shakeEndOn = null;
     private TextView m_shakeStartFrom = null;
     private Switch m_shakeSwitcher = null;
+    private Switch m_changeBrightnessSwitcher = null;
     private SharedPreferences m_preferences = null;
+    private Alarm m_alarm = null;
     private int[] m_timeValue = {20,0};
     private int[] m_previousTimeValue = new int[2];
+
+    public boolean isChangeBrightnessEnable() { return m_isChangeBrightnessEnable; }
+    private boolean m_isChangeBrightnessEnable = false;
+
+    public BrightnessPoint getCurrentBrightnessPoint() { return m_currentBrightnessPoint; }
+    public void setCurrentBrightnessPoint() { this.m_currentBrightnessPoint = BrightnessPointManager.getClosestTimePoint(m_preferences); }
+
+    private BrightnessPoint m_currentBrightnessPoint = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.w("info", "MainActivity onCreate");
         setContentView(R.layout.activity_main);
+
         activity = this;
 
         m_preferences = getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE);
@@ -51,7 +54,6 @@ public class MainActivity extends Activity {
         m_timeValue[1] = m_preferences.getInt("shakeStartFromMin", m_timeValue[1]);
 
         final boolean startShake = m_preferences.getBoolean("shakeServiceStatus", false);
-        changeShakeServiceState(startShake);
         m_shakeSwitcher = (Switch)findViewById(R.id.shakeServiceSwitcher);
         m_shakeSwitcher.setChecked(startShake);
         m_shakeSwitcher.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -60,7 +62,24 @@ public class MainActivity extends Activity {
                 SharedPreferences.Editor editor = m_preferences.edit();
                 editor.putBoolean("shakeServiceStatus", isChecked);
                 editor.apply();
-                changeShakeServiceState(isChecked);
+//                changeShakeServiceState(isChecked);
+                String[] txt = {"Ой все! Сломал телефон нахуй.", "Я тебе, блеать, говорил не трогай это!"};
+                int pos = (Math.random() > 0.5) ? 0 : 1;
+                Toast.makeText(activity, txt[pos], Toast.LENGTH_LONG).show();
+            }
+        });
+
+        m_isChangeBrightnessEnable = m_preferences.getBoolean("changeBrightnessStatus", false);
+        m_changeBrightnessSwitcher = (Switch)findViewById(R.id.changeBrightnesSwitcher);
+        m_changeBrightnessSwitcher.setChecked(m_isChangeBrightnessEnable);
+        m_changeBrightnessSwitcher.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                m_isChangeBrightnessEnable = isChecked;
+                SharedPreferences.Editor editor = m_preferences.edit();
+                editor.putBoolean("changeBrightnessStatus", m_isChangeBrightnessEnable);
+                editor.apply();
+                changeBrightnessState(isChecked);
             }
         });
 
@@ -68,7 +87,6 @@ public class MainActivity extends Activity {
         m_shakeStartFrom.setText(getString(R.string.shake_service_start_from) + Utilites.convertTime(m_timeValue[0], m_timeValue[1]));
 
         m_brightnessPointsText = (TextView)findViewById(R.id.setBrightnessPointsText);
-        m_brightnessPointsText.setText(BrightnessPointManager.getPointsCount() + " " + getString(R.string.set_brightness_points_text));
 
         Calendar updateTime = Calendar.getInstance();
         updateTime.setTimeInMillis(System.currentTimeMillis());
@@ -79,7 +97,6 @@ public class MainActivity extends Activity {
         TextView txt1 = new TextView(MainActivity.this);
         txt1.setText("niggers like butter");
         txt1.setRotation(1.8f);
-//        linearLayout.setBackgroundColor(Color.TRANSPARENT);
         linearLayout.addView(txt1);
     }
 
@@ -94,6 +111,13 @@ public class MainActivity extends Activity {
     public void onResume( ) {
         super.onResume();
         Log.w("info", "MainActivity onResume");
+
+        int pointsCount = BrightnessPointManager.getPointsCount();
+        if ( pointsCount > 0 ) {
+            m_brightnessPointsText.setText(pointsCount + " " + getString(R.string.set_brightness_points_text));
+        } else {
+            m_brightnessPointsText.setText("Brightness points doesn't exists");
+        }
     }
 
     @Override
@@ -122,6 +146,14 @@ public class MainActivity extends Activity {
         return false;
     }
 
+    public void changeBrightnessState( final boolean isStart )
+    {
+        Log.i("info", "Start Shake Service");
+        Intent alarmService = new Intent(this, AlarmService.class);
+        alarmService.putExtra("startNextAlarm", isStart);
+        startService(alarmService);
+    }
+
     private void changeShakeServiceState( final boolean isStart )
     {
         if ( isStart ) {
@@ -137,17 +169,17 @@ public class MainActivity extends Activity {
 
     public void onFromClick( View view )
     {
+        /*
         BrightnessPointManager.addPoint(new BrightnessPoint(13,30,80));
         BrightnessPointManager.addPoint(new BrightnessPoint(13,31,100));
         BrightnessPointManager.addPoint(new BrightnessPoint(13,32,10));
-        BrightnessPointManager.addPoint(new BrightnessPoint(13,33,50));
-        BrightnessPointManager.addPoint(new BrightnessPoint(14,26,60));
         BrightnessPointManager.saveToPreferences(m_preferences);
         BrightnessPoint point = BrightnessPointManager.getClosestTimePoint(m_preferences);
         if ( point != null ) {
             Alarm alarm = new Alarm();
             alarm.setAlarm(activity, point);
         }
+        */
 
         /*
         m_previousTimeValue = m_timeValue.clone();

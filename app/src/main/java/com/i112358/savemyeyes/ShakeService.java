@@ -105,8 +105,18 @@ public class ShakeService extends Service implements SensorEventListener {
     }
 
     public void ChangeBrightness() {
-        m_brightness = BrightnessController.getCurrentBrightness(getContentResolver());
-        m_delay = BrightnessController.changeToValueInTime(0, 60);
+        m_brightness = Utilites.getCurrentBrightness(getContentResolver());
+        m_delay = 100;
+//        m_delay = BrightnessController.changeToValueInTime(0, 60);
+//        m_shouldBeValue = brightness;
+//        m_shoudBeAbsoluteValue = m_shouldBeValue * 255 / 100;
+//
+//        int diff = Math.abs(m_shoudBeAbsoluteValue - m_currentAbsouluteValue);
+//        Log.i("info", "values to change is " + diff);
+//        m_delay = seconds * 1000 / diff;
+//        Log.i("info", "change every Miliseconds " + m_delay);
+//        return m_delay;
+
         m_directionUp = (m_brightness <= 10);
         m_direction = 1;
         if ( !m_directionUp ) m_direction = -1;
@@ -128,7 +138,7 @@ public class ShakeService extends Service implements SensorEventListener {
                 continueChange = false;
             }
 
-            BrightnessController.setBrightness(getContentResolver(), m_brightness);
+            Utilites.setBrightness(getContentResolver(), m_brightness);
             if ( continueChange ) {
                 m_handler.postDelayed(this, m_delay);
             } else {

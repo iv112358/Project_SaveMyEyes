@@ -20,20 +20,30 @@
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".SetPointsActivity"
+            android:label="@string/title_activity_set_points"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.i112358.savemyeyes.MainActivity" />
         </activity>
 
         <service
             android:name=".ShakeService"
-            android:enabled="true"
-            android:exported="true" >
+            android:enabled="true">
         </service>
         <service
             android:name=".ChangeBrightnessService"
-            android:enabled="true"
-            android:exported="true" >
+            android:enabled="true" >
+        </service>
+        <service
+            android:name=".AlarmService"
+            android:enabled="true">
         </service>
 
         <receiver
@@ -44,15 +54,11 @@
             </intent-filter>
         </receiver>
 
-        <activity
-            android:name=".SetPointsActivity"
-            android:label="@string/title_activity_set_points"
-            android:parentActivityName=".MainActivity"
-            android:theme="@style/AppTheme.NoActionBar" >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.i112358.savemyeyes.MainActivity" />
-        </activity>
+        <receiver android:name=".BootReceiver" android:enabled="true" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

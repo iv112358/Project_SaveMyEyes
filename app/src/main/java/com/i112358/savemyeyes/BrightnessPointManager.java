@@ -19,7 +19,6 @@ import java.util.Iterator;
  * Created by i112358 on 10/7/15.
  */
 public class BrightnessPointManager {
-    public static JSONObject s_pointManager = new JSONObject();
     public static ArrayList<BrightnessPoint> s_brightnessPoints = new ArrayList<BrightnessPoint>();
 
     public static BrightnessPoint getClosestTimePoint( SharedPreferences preferences )
@@ -29,11 +28,16 @@ public class BrightnessPointManager {
             return null;
         }
 
+        if ( s_brightnessPoints.isEmpty() ) {
+            Log.i("info", "List of points is empty");
+            return null;
+        }
+
         Calendar calendar = Calendar.getInstance();
         int currentTime[] = {calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE)};
 //        int currentTime[] = {14,18};
         Log.i("info", "Getpoints counter is " + s_brightnessPoints.size());
-        Log.i("info", "Current time is " + currentTime[0] + ":" + currentTime[1]);
+        Log.i("info", "Current point time is " + currentTime[0] + ":" + currentTime[1]);
 
         BrightnessPoint pointToUse = null;
         BrightnessPoint lowerPoint = null;
@@ -50,13 +54,7 @@ public class BrightnessPointManager {
             } else {
                 lowerPoint = point;
             }
-//            Log.i("info", "Current time is " + currentTime[0] + ":" + currentTime[1]);
-//            Log.i("info", "point is " + point.getHour() + ":" + point.getMinute());
-//            if ( pointToUse == null ) {
-//                Log.i("info", "no point to compare");
-//            } else {
-//                Log.i("info", "point to compare is " + pointToUse.getHour() + ":" + pointToUse.getMinute());
-//            }
+
             if ( point.getHour() > currentTime[0] ) {
                 if ( pointToUse == null )
                     pointToUse = point;
@@ -78,7 +76,7 @@ public class BrightnessPointManager {
 //            Log.i("info", "---------");
         }
 
-        if ( pointToUse == null ) {
+        if ( pointToUse == null && lowerPoint != null ) {
             Log.i("info", "Lower point used ");
             pointToUse = lowerPoint;
             pointToUse.setNextDay();
@@ -95,6 +93,11 @@ public class BrightnessPointManager {
             return s_brightnessPoints.get(id);
         else
             return null;
+    }
+
+    public static void removePoint( final int index )
+    {
+        s_brightnessPoints.remove(index);
     }
 
     public static void addPoint( final BrightnessPoint point )
@@ -118,28 +121,27 @@ public class BrightnessPointManager {
             Log.i("info", "clear saved points");
         }
 
-        for ( int i = 0; i < s_brightnessPoints.size(); i++ )
-        {
+        JSONObject saveJSON = new JSONObject();
+        for ( int i = 0; i < s_brightnessPoints.size(); i++ ) {
             BrightnessPoint point = s_brightnessPoints.get(i);
             try {
-                s_pointManager.put("point_"+i, point.getJSONObject());
+                saveJSON.put("point_"+i, point.getJSONObject());
             } catch ( JSONException e ) {
                 e.printStackTrace();
             }
         }
 
-        Log.i("info", "POINTS Saved" + s_pointManager.toString());
+        Log.i("info", "POINTS Saved" + saveJSON.toString());
 
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("brightnessPoints", s_pointManager.toString());
+        editor.putString("brightnessPoints", saveJSON.toString());
         editor.apply();
     }
 
     public static boolean loadSavedPoints( SharedPreferences preferences )
     {
         String loadPoints = preferences.getString("brightnessPoints", "");
-        if ( ("").equals(loadPoints) )
-        {
+        if ( ("").equals(loadPoints) ) {
             Log.i("info", "no points exists");
             return false;
         } else {
@@ -153,13 +155,22 @@ public class BrightnessPointManager {
                     BrightnessPoint point = new BrightnessPoint(jPoint.getInt("hour"), jPoint.getInt("minute"), jPoint.getInt("brightness"));
                     s_brightnessPoints.add(point);
                 }
-                s_pointManager = json;
-
-
             } catch ( JSONException e ) {
                 e.printStackTrace();
             }
         }
         return true;
+    }
+
+    public static void sortPoints()
+    {
+        Collections.sort(s_brightnessPoints, new Comparator<BrightnessPoint>() {
+            @Override
+            public int compare( BrightnessPoint p1, BrightnessPoint p2 ) {
+                int totalP1 = p1.getHour()*60 + p1.getMinute();
+                int totalP2 = p2.getHour()*60 + p2.getMinute();
+                return Integer.valueOf(totalP1).compareTo(totalP2);
+            }
+        });
     }
 }

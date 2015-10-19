@@ -1,5 +1,8 @@
 package com.i112358.savemyeyes;
 
+import android.graphics.Point;
+import android.util.Log;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -14,6 +17,11 @@ public class BrightnessPoint {
     public BrightnessPoint( final int hour, final int minute, final int brightness )
     {
         super();
+        updatePoint(hour, minute, brightness);
+    }
+
+    public void updatePoint( final int hour, final int minute, final int brightness )
+    {
         try {
             point.put("hour", hour);
             point.put("minute", minute);
@@ -59,5 +67,22 @@ public class BrightnessPoint {
             e.printStackTrace();
         }
         return value;
+    }
+
+    @Override
+    public boolean equals( Object other )
+    {
+        Log.i("info", "compare point with point");
+        if ( other != null ) {
+            BrightnessPoint otherPoint = (BrightnessPoint)other;
+            if ( otherPoint.getHour() == this.getHour() ) {
+                if ( otherPoint.getMinute() == this.getMinute() ) {
+                    if ( otherPoint.getBrightness() == this.getBrightness() ) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
