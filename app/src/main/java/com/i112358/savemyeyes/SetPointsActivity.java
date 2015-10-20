@@ -9,12 +9,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -25,7 +22,6 @@ public class SetPointsActivity extends Activity {
     public static SetPointsActivity Get() { return activity; }
     private static SetPointsActivity activity = null;
     private int[] m_newValues = {0, 0, 0};
-    Dialog m_dialog = null;
     LinearLayout m_layout = null;
     private int m_previousBrightnessValue = 255;
     private boolean m_enableBrightnessPreview = false;
@@ -72,10 +68,10 @@ public class SetPointsActivity extends Activity {
     {
         m_previousBrightnessValue = Utilites.getCurrentBrightness(getContentResolver());
 
-        m_dialog = new Dialog(this);
-        m_dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        m_dialog.setContentView(R.layout.setup_point);
-        m_dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.setup_point);
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 m_newValues[0] = m_newValues[1] = m_newValues[2] = 0;
@@ -84,9 +80,9 @@ public class SetPointsActivity extends Activity {
             }
         });
 
-        final TextView brightness = (TextView)(m_dialog.findViewById(R.id.textSetPointBrightness));
+        final TextView brightness = (TextView)(dialog.findViewById(R.id.textSetPointBrightness));
 
-        Button doneButton = (Button)(m_dialog.findViewById(R.id.buttonSetPointDone));
+        Button doneButton = (Button)(dialog.findViewById(R.id.buttonSetPointDone));
         doneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -97,11 +93,11 @@ public class SetPointsActivity extends Activity {
                 }
                 BrightnessPointManager.saveToPreferences(getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE));
                 Log.i("info", "Time is " + Utilites.convertTime(m_newValues[0], m_newValues[1]) + " Brightness is " + m_newValues[2]);
-                m_dialog.dismiss();
+                dialog.dismiss();
             }
         });
 
-        SeekBar seekBar = (SeekBar)(m_dialog.findViewById(R.id.seekBar));
+        SeekBar seekBar = (SeekBar)(dialog.findViewById(R.id.seekBar));
         seekBar.setMax(255);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -129,7 +125,7 @@ public class SetPointsActivity extends Activity {
             }
         });
 
-        TimePicker timePicker = (TimePicker)(m_dialog.findViewById(R.id.timePicker));
+        TimePicker timePicker = (TimePicker)(dialog.findViewById(R.id.timePicker));
         timePicker.setIs24HourView(true);
         timePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
             @Override
@@ -157,7 +153,7 @@ public class SetPointsActivity extends Activity {
 
         brightness.setText("Brightness " + getPercentValue(seekBar.getProgress()) + "%");
 
-        m_dialog.show();
+        dialog.show();
     }
 
     private int getPercentValue( final int absoluteValue )
@@ -212,5 +208,4 @@ public class SetPointsActivity extends Activity {
             MainActivity.Get().changeBrightnessState(false);
         }
     }
-
 }

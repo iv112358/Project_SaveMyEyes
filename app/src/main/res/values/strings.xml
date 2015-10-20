@@ -13,5 +13,6 @@
     <string name="ACCELERATION_TRIGGER">16.0</string>
     <string name="PREFERENCES">112358_preferences</string>
     <string name="title_activity_set_points">SetPointsActivity</string>
+    <string name="title_activity_shake_settings">ShakeSettingsActivity</string>
 
 </resources>

@@ -114,8 +114,8 @@ public class BrightnessPointManager {
     {
         Log.i("info", "saveToPreferences counter is " + s_brightnessPoints.size());
 
+        SharedPreferences.Editor editor = preferences.edit();
         if ( preferences.contains("brightnessPoints") ) {
-            SharedPreferences.Editor editor = preferences.edit();
             editor.remove("brightnessPoints");
             editor.apply();
             Log.i("info", "clear saved points");
@@ -132,8 +132,6 @@ public class BrightnessPointManager {
         }
 
         Log.i("info", "POINTS Saved" + saveJSON.toString());
-
-        SharedPreferences.Editor editor = preferences.edit();
         editor.putString("brightnessPoints", saveJSON.toString());
         editor.apply();
     }

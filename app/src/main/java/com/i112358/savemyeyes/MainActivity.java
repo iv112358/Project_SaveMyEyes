@@ -9,34 +9,24 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
-import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.util.Calendar;
 
 public class MainActivity extends Activity {
 
     public static MainActivity Get() { return activity; }
     private static MainActivity activity;
-
+    private SharedPreferences m_preferences = null;
     private TextView m_brightnessPointsText = null;
-    private TextView m_shakeEndOn = null;
-    private TextView m_shakeStartFrom = null;
     private Switch m_shakeSwitcher = null;
     private Switch m_changeBrightnessSwitcher = null;
-    private SharedPreferences m_preferences = null;
-    private Alarm m_alarm = null;
-    private int[] m_timeValue = {20,0};
-    private int[] m_previousTimeValue = new int[2];
 
     public boolean isChangeBrightnessEnable() { return m_isChangeBrightnessEnable; }
     private boolean m_isChangeBrightnessEnable = false;
 
     public BrightnessPoint getCurrentBrightnessPoint() { return m_currentBrightnessPoint; }
     public void setCurrentBrightnessPoint() { this.m_currentBrightnessPoint = BrightnessPointManager.getClosestTimePoint(m_preferences); }
-
     private BrightnessPoint m_currentBrightnessPoint = null;
 
     @Override
@@ -49,9 +39,7 @@ public class MainActivity extends Activity {
 
         m_preferences = getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE);
         BrightnessPointManager.loadSavedPoints(m_preferences);
-
-        m_timeValue[0] = m_preferences.getInt("shakeStartFromHour", m_timeValue[0]);
-        m_timeValue[1] = m_preferences.getInt("shakeStartFromMin", m_timeValue[1]);
+        ShakeServiceSettings.loadSavedSettings(m_preferences);
 
         final boolean startShake = m_preferences.getBoolean("shakeServiceStatus", false);
         m_shakeSwitcher = (Switch)findViewById(R.id.shakeServiceSwitcher);
@@ -62,12 +50,10 @@ public class MainActivity extends Activity {
                 SharedPreferences.Editor editor = m_preferences.edit();
                 editor.putBoolean("shakeServiceStatus", isChecked);
                 editor.apply();
-//                changeShakeServiceState(isChecked);
-                String[] txt = {"Ой все! Сломал телефон нахуй.", "Я тебе, блеать, говорил не трогай это!"};
-                int pos = (Math.random() > 0.5) ? 0 : 1;
-                Toast.makeText(activity, txt[pos], Toast.LENGTH_LONG).show();
+                changeShakeServiceState(isChecked);
             }
         });
+        changeShakeServiceState(startShake);
 
         m_isChangeBrightnessEnable = m_preferences.getBoolean("changeBrightnessStatus", false);
         m_changeBrightnessSwitcher = (Switch)findViewById(R.id.changeBrightnesSwitcher);
@@ -82,22 +68,6 @@ public class MainActivity extends Activity {
                 changeBrightnessState(isChecked);
             }
         });
-
-        m_shakeStartFrom = (TextView) findViewById(R.id.shakeStartTime);
-        m_shakeStartFrom.setText(getString(R.string.shake_service_start_from) + Utilites.convertTime(m_timeValue[0], m_timeValue[1]));
-
-        m_brightnessPointsText = (TextView)findViewById(R.id.setBrightnessPointsText);
-
-        Calendar updateTime = Calendar.getInstance();
-        updateTime.setTimeInMillis(System.currentTimeMillis());
-        updateTime.set(Calendar.HOUR_OF_DAY, 20);
-        updateTime.set(Calendar.MINUTE, 00);
-
-        RelativeLayout linearLayout = (RelativeLayout) findViewById(R.id.main_layout);
-        TextView txt1 = new TextView(MainActivity.this);
-        txt1.setText("niggers like butter");
-        txt1.setRotation(1.8f);
-        linearLayout.addView(txt1);
     }
 
     @Override
@@ -111,6 +81,9 @@ public class MainActivity extends Activity {
     public void onResume( ) {
         super.onResume();
         Log.w("info", "MainActivity onResume");
+
+        if ( m_brightnessPointsText == null )
+            m_brightnessPointsText = (TextView)findViewById(R.id.setBrightnessPointsText);
 
         int pointsCount = BrightnessPointManager.getPointsCount();
         if ( pointsCount > 0 ) {
@@ -156,68 +129,33 @@ public class MainActivity extends Activity {
 
     private void changeShakeServiceState( final boolean isStart )
     {
+        View shakeSettingsView = findViewById(R.id.shakeSettingsLayout);
+        View space = findViewById(R.id.space_shake_settings);
         if ( isStart ) {
+            shakeSettingsView.setVisibility(View.VISIBLE);
+            space.setVisibility(View.VISIBLE);
             if ( !isShakeServiceRunning(ShakeService.class) ) {
                 Log.i("info", "Start Shake Service");
                 startService(new Intent(this, ShakeService.class));
             }
         } else {
+            shakeSettingsView.setVisibility(View.GONE);
+            space.setVisibility(View.GONE);
             Log.i("info", "Stop Shake Service");
             stopService(new Intent(this, ShakeService.class));
         }
     }
 
-    public void onFromClick( View view )
-    {
-        /*
-        BrightnessPointManager.addPoint(new BrightnessPoint(13,30,80));
-        BrightnessPointManager.addPoint(new BrightnessPoint(13,31,100));
-        BrightnessPointManager.addPoint(new BrightnessPoint(13,32,10));
-        BrightnessPointManager.saveToPreferences(m_preferences);
-        BrightnessPoint point = BrightnessPointManager.getClosestTimePoint(m_preferences);
-        if ( point != null ) {
-            Alarm alarm = new Alarm();
-            alarm.setAlarm(activity, point);
-        }
-        */
-
-        /*
-        m_previousTimeValue = m_timeValue.clone();
-        TimePickerDialog tpd = new TimePickerDialog(this, new TimePickerDialog.OnTimeSetListener() {
-            public void onTimeSet(TimePicker view, int hour, int minute) {
-                MainActivity.Get().saveNewTime(hour,minute);
-            }
-        }, m_timeValue[0], m_timeValue[1], true);
-        tpd.setCancelable(true);
-        tpd.setOnCancelListener(new TimePickerDialog.OnCancelListener() {
-            @Override
-            public void onCancel(DialogInterface dialog) {
-                Log.i("info", "onCancel called");
-                saveNewTime(m_previousTimeValue[0], m_previousTimeValue[1]);
-            }
-        });
-
-        tpd.show();
-        */
-    }
-
     public void onViewPointsClick( View view )
     {
-        Log.i("info", "On Click set points");
         Intent intent = new Intent(this, SetPointsActivity.class);
         startActivity(intent);
     }
 
-    private void saveNewTime( final int hour, final int minute )
+    public void onShakeSettingsClick( View view )
     {
-        SharedPreferences.Editor editor = m_preferences.edit();
-        m_timeValue[0] = hour;
-        m_timeValue[1] = minute;
-        editor.putInt("shakeStartFromHour", hour);
-        editor.putInt("shakeStartFromMin", minute);
-        editor.apply();
-
-        m_shakeStartFrom.setText(getString(R.string.shake_service_start_from) + Utilites.convertTime(m_timeValue[0], m_timeValue[1]));
-        new BrightnessPoint(hour, minute, 50);
+        Log.i("info", "On onShakeSettingsClick");
+        Intent intent = new Intent(this, ShakeServiceSettingsActivity.class);
+        startActivity(intent);
     }
 }

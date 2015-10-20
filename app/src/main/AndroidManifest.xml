@@ -32,6 +32,15 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.i112358.savemyeyes.MainActivity" />
         </activity>
+        <activity
+            android:name=".ShakeServiceSettingsActivity"
+            android:label="@string/title_activity_shake_settings"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.i112358.savemyeyes.MainActivity" />
+        </activity>
 
         <service
             android:name=".ShakeService"
