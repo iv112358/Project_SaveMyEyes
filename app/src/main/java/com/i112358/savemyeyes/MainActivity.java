@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.NumberPicker;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +36,7 @@ public class MainActivity extends Activity {
         Log.w("info", "MainActivity onCreate");
         setContentView(R.layout.activity_main);
 
+//        Thread.setDefaultUncaughtExceptionHandler();
         activity = this;
 
         m_preferences = getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE);
@@ -136,13 +138,13 @@ public class MainActivity extends Activity {
             space.setVisibility(View.VISIBLE);
             if ( !isShakeServiceRunning(ShakeService.class) ) {
                 Log.i("info", "Start Shake Service");
-                startService(new Intent(this, ShakeService.class));
+//                startService(new Intent(this, ShakeService.class));
             }
         } else {
             shakeSettingsView.setVisibility(View.GONE);
             space.setVisibility(View.GONE);
             Log.i("info", "Stop Shake Service");
-            stopService(new Intent(this, ShakeService.class));
+//            stopService(new Intent(this, ShakeService.class));
         }
     }
 

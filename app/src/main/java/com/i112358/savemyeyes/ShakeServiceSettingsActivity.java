@@ -4,16 +4,13 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
-import android.widget.TextView;
+import android.widget.NumberPicker;
 import android.widget.TimePicker;
-
-import java.util.Calendar;
 
 public class ShakeServiceSettingsActivity extends Activity {
 
@@ -25,11 +22,32 @@ public class ShakeServiceSettingsActivity extends Activity {
         Log.w("info", "ShakeServiceSettingsActivity onCreate");
 
         setContentView(R.layout.shake_settings);
+
+        NumberPicker np = (NumberPicker) findViewById(R.id.sssaTriggerPicker);
+        np.setMaxValue(9);
+        np.setMinValue(0);
+        np.setWrapSelectorWheel(false);
+        np.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                Log.i("info", "sssaTriggerPicker onValueChange" + oldVal + " " + newVal);
+            }
+        });
+
+        NumberPicker np1 = (NumberPicker) findViewById(R.id.sssaAveragePicker);
+        np1.setMaxValue(9);
+        np1.setMinValue(0);
+        np1.setWrapSelectorWheel(false);
+        np1.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                Log.i("info", "sssaAveragePicker onValueChange" + oldVal + " " + newVal);
+            }
+        });
     }
 
     @Override
-    public void onResume()
-    {
+    public void onResume() {
         super.onResume();
         Log.w("info", "ShakeServiceSettingsActivity onResume");
     }
@@ -68,6 +86,7 @@ public class ShakeServiceSettingsActivity extends Activity {
 //                }
 //                BrightnessPointManager.saveToPreferences(getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE));
 //                Log.i("info", "Time is " + Utilites.convertTime(m_newValues[0], m_newValues[1]) + " Brightness is " + m_newValues[2]);
+                ShakeServiceSettings.saveSettings(getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE));
                 dialog.dismiss();
             }
         });
