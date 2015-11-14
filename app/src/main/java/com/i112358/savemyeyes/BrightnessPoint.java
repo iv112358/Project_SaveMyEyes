@@ -1,14 +1,8 @@
 package com.i112358.savemyeyes;
 
-import android.graphics.Point;
-import android.util.Log;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- * Created by i112358 on 10/5/15.
- */
 public class BrightnessPoint {
 
     JSONObject point = new JSONObject();
@@ -29,6 +23,11 @@ public class BrightnessPoint {
         } catch ( JSONException e ) {
             e.printStackTrace();
         }
+    }
+
+    public int getAbsoluteValue()
+    {
+        return getHour() * 60 + getMinute();
     }
 
     public boolean isNextDay()
@@ -53,10 +52,8 @@ public class BrightnessPoint {
         return getValue("minute");
     }
 
-    public int getBrightness()
-    {
-        return getValue("brightness");
-    }
+    public int getBrightness() { return getValue("brightness"); }
+    public float getBrightnessRelative() { return (100.0f *getBrightness() / 255.0f); }
 
     private int getValue( final String key )
     {
@@ -72,7 +69,6 @@ public class BrightnessPoint {
     @Override
     public boolean equals( Object other )
     {
-        Log.i("info", "compare point with point");
         if ( other != null ) {
             BrightnessPoint otherPoint = (BrightnessPoint)other;
             if ( otherPoint.getHour() == this.getHour() ) {

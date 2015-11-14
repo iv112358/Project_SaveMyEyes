@@ -1,20 +1,29 @@
 package com.i112358.savemyeyes;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.Space;
 import android.widget.TextView;
 import android.widget.TimePicker;
+import android.widget.Toast;
+import com.i112358.savemyeyes.Graphics.Line;
 import java.util.Calendar;
 
 public class SetPointsActivity extends Activity {
@@ -25,7 +34,10 @@ public class SetPointsActivity extends Activity {
     LinearLayout m_layout = null;
     private int m_previousBrightnessValue = 255;
     private boolean m_enableBrightnessPreview = false;
-    private SharedPreferences m_preferences = null;
+    private int m_deletePointTag = 0;
+
+    private ImageView m_imageView;
+    Handler m_handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,10 +46,10 @@ public class SetPointsActivity extends Activity {
 
         setContentView(R.layout.points_layout);
         m_layout = (LinearLayout)findViewById(R.id.pointsLayout);
-
-        m_preferences = getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE);
-        MainActivity.Get().setCurrentBrightnessPoint();
+        MainActivity.Get().setNextBrightnessPoint();
         updateSetPointScreen();
+
+        m_imageView = (ImageView)findViewById(R.id.imageView);
     }
 
     @Override
@@ -45,6 +57,10 @@ public class SetPointsActivity extends Activity {
     {
         super.onResume();
         Log.w("info", "SetPointsActivity onResume");
+        boolean isGranted = Utilites.isPermissionGranted(getApplicationContext());
+        if ( !isGranted ) {
+            this.finish();
+        }
     }
 
     public void onEditPointClick( View view )
@@ -52,11 +68,36 @@ public class SetPointsActivity extends Activity {
         showSetDialog(BrightnessPointManager.getPoint((int) view.getTag()));
     }
 
-    public void onDeletePointClick( View view )
+    private void deletePoint()
     {
-        BrightnessPointManager.removePoint((int)view.getTag());
+        BrightnessPointManager.removePoint(m_deletePointTag);
         BrightnessPointManager.saveToPreferences(getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE));
         updateSetPointScreen();
+    }
+
+    public void onDeletePointClick( View view )
+    {
+        m_deletePointTag = -1;
+        m_deletePointTag = (int)view.getTag();
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+        dialogBuilder.setMessage("Confirm delete point");
+        dialogBuilder.setCancelable(true);
+        dialogBuilder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Log.i("info", "Delete confirmed " + m_deletePointTag);
+                deletePoint();
+            }
+        });
+        dialogBuilder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Log.i("info", "Delete cancelled");
+            }
+        });
+
+        AlertDialog dialog = dialogBuilder.create();
+        dialog.show();
     }
 
     public void onAddPointClick( View view )
@@ -80,19 +121,24 @@ public class SetPointsActivity extends Activity {
             }
         });
 
-        final TextView brightness = (TextView)(dialog.findViewById(R.id.textSetPointBrightness));
-
         Button doneButton = (Button)(dialog.findViewById(R.id.buttonSetPointDone));
         doneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (point != null) {
+                int closestPointId = BrightnessPointManager.checkIfPointCloseToNeighbor(m_newValues[0] * 60 + m_newValues[1], point);
+                if ( closestPointId != -1 ) {
+                    Log.i("info", "point to close to point " + (closestPointId + 1));
+                    Toast.makeText(getApplicationContext(), "Point is too close to other point", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                if ( point != null ) {
                     point.updatePoint(m_newValues[0], m_newValues[1], m_newValues[2]);
                 } else {
                     BrightnessPointManager.addPoint(new BrightnessPoint(m_newValues[0], m_newValues[1], m_newValues[2]));
                 }
+
                 BrightnessPointManager.saveToPreferences(getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE));
-                Log.i("info", "Time is " + Utilites.convertTime(m_newValues[0], m_newValues[1]) + " Brightness is " + m_newValues[2]);
                 dialog.dismiss();
             }
         });
@@ -107,8 +153,6 @@ public class SetPointsActivity extends Activity {
                     Utilites.setBrightness(getContentResolver(), seekBar.getProgress());
                 }
                 m_newValues[2] = seekBar.getProgress();
-                int percent = getPercentValue(seekBar.getProgress());
-                brightness.setText("Brightness " + percent + "%");
             }
 
             @Override
@@ -151,14 +195,7 @@ public class SetPointsActivity extends Activity {
             m_newValues[1] = calendar.get(Calendar.MINUTE);
         }
 
-        brightness.setText("Brightness " + getPercentValue(seekBar.getProgress()) + "%");
-
         dialog.show();
-    }
-
-    private int getPercentValue( final int absoluteValue )
-    {
-        return (int)((float)absoluteValue / 255 * 100);
     }
 
     public void updateSetPointScreen()
@@ -178,34 +215,66 @@ public class SetPointsActivity extends Activity {
 
         int pointsCount = BrightnessPointManager.getPointsCount();
         for ( int i = 0; i < pointsCount; i++ ) {
-
-            View point = getLayoutInflater().inflate(R.layout.point_element,null);
-
-            Button button_delete = (Button)point.findViewById(R.id.button_delete_point);
-            button_delete.setTag(i);
-
-            Button button_edit = (Button)point.findViewById(R.id.button_edit_point);
-            button_edit.setTag(i);
-
-            TextView text = (TextView)point.findViewById(R.id.brightnessPointText);
             BrightnessPoint brPoint = BrightnessPointManager.getPoint(i);
-            text.setText(getPercentValue(brPoint.getBrightness()) + "% on " + Utilites.convertTime(brPoint.getHour(), brPoint.getMinute()));
+            if ( brPoint != null ) {
+                View point = getLayoutInflater().inflate(R.layout.point_element,null);
+                Button button_delete = (Button)point.findViewById(R.id.button_delete_point);
+                button_delete.setTag(i);
+                Button button_edit = (Button)point.findViewById(R.id.button_edit_point);
+                button_edit.setTag(i);
+                TextView text = (TextView)point.findViewById(R.id.brightnessPointText);
+                text.setText(Utilites.convertTime(brPoint.getHour(), brPoint.getMinute()));
 
-            point.setTag("point");
-            m_layout.addView(point);
+                point.setTag("point");
 
-            if ( brPoint.equals(nextPoint) ) {
-                point.setBackgroundColor(0xFF80888D);
+                m_layout.addView(point);
+
+                if ( brPoint.equals(nextPoint) ) {
+                    point.findViewById(R.id.pointBackgroundElement).setBackgroundColor(0xFFBFAFA1);
+                }
             }
         }
 
         if ( MainActivity.Get().isChangeBrightnessEnable() && pointsCount > 0 ) {
-            if ( !nextPoint.equals(MainActivity.Get().getCurrentBrightnessPoint()) ) {
-                MainActivity.Get().setCurrentBrightnessPoint();
+            if ( !nextPoint.equals(MainActivity.Get().getNextBrightnessPoint()) ) {
+                MainActivity.Get().setNextBrightnessPoint();
                 MainActivity.Get().changeBrightnessState(true);
             }
         } else {
             MainActivity.Get().changeBrightnessState(false);
         }
+        m_handler.postDelayed(createGraphic, 100);
     }
+
+    private Runnable createGraphic = new Runnable() {
+        @Override
+        public void run() {
+            Bitmap bitmap = Bitmap.createBitmap(m_imageView.getWidth(), m_imageView.getHeight(), Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            m_imageView.setImageBitmap(bitmap);
+
+            BrightnessPointManager.sortPoints();
+            if ( BrightnessPointManager.getPointsCount() > 1 ) {
+                int pointNumber = 0;
+                BrightnessPoint previous = new BrightnessPoint(0,0, BrightnessPointManager.getPoint(BrightnessPointManager.getPointsCount() - 1).getBrightness());
+                while ( pointNumber < BrightnessPointManager.getPointsCount() ) {
+                    BrightnessPoint current = BrightnessPointManager.getPoint(pointNumber);
+                    Line line = new Line(previous, BrightnessPointManager.getPoint(pointNumber));
+                    line.draw(canvas);
+                    previous = current;
+                    pointNumber++;
+                }
+                BrightnessPoint current = new BrightnessPoint(24,0, previous.getBrightness());
+                Line line = new Line(previous, current);
+                line.draw(canvas);
+            }
+
+            Calendar calendar = Calendar.getInstance();
+            float currentTime = calendar.get(Calendar.HOUR_OF_DAY)*60 + calendar.get(Calendar.MINUTE);
+            Line time = new Line(currentTime);
+            time.setLineWidth(1);
+            time.setColor(0xFFDD1122);
+            time.draw(canvas);
+        }
+    };
 }

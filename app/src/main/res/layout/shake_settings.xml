@@ -3,13 +3,15 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:paddingLeft="5dp"
-    android:paddingRight="5dp">
+    android:paddingRight="5dp"
+    android:paddingTop="10dp">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:clickable="false"
-        android:background="#efe5e5">
+        android:background="#efe5e5"
+        android:id="@+id/sssa_option_start_from">
 
         <Button
             style="?android:attr/buttonStyleSmall"
@@ -41,7 +43,8 @@
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:clickable="false"
-        android:background="#efe5e5" >
+        android:background="#efe5e5"
+        android:id="@+id/sssa_option_end_on">
 
         <Button
             style="?android:attr/buttonStyleSmall"
@@ -132,6 +135,48 @@
         </LinearLayout>
 
     </RelativeLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="10dp" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:clickable="false"
+        android:background="#efe5e5" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="none"
+            android:layout_centerVertical="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:text="Enable debug messages"
+            android:id="@+id/textView" />
+
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/sssaDebugCheckBox"
+            android:checked="false"
+            android:layout_centerVertical="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
+    </RelativeLayout>
+
+    <Button
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Save"
+        android:id="@+id/button"
+        android:layout_gravity="center_horizontal"
+        android:clickable="true"
+        android:onClick="onSSSASaveValuesClick"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp" />
 
 
 </LinearLayout>

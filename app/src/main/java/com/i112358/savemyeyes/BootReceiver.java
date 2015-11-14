@@ -8,7 +8,7 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Intent alarmService = new Intent(context, AlarmService.class);
-        alarmService.putExtra("startNextAlarm", true);
+        alarmService.putExtra("startScheduledChangeBrightness", true);
         context.startService(alarmService);
     }
 }

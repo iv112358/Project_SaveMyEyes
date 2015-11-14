@@ -1,8 +1,6 @@
-package com.i112358.savemyeyes;
+package com.i112358.savemyeyes.Shake;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -10,9 +8,12 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.IBinder;
-import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
+
+import com.i112358.savemyeyes.R;
+import com.i112358.savemyeyes.Utilites;
+
 import java.util.ArrayList;
 
 public class ShakeService extends Service implements SensorEventListener {
@@ -60,7 +61,8 @@ public class ShakeService extends Service implements SensorEventListener {
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
 
-        Toast.makeText(this, "ShakeService Started", Toast.LENGTH_LONG).show();
+        ShakeServiceSettings.loadSavedSettings(getSharedPreferences(getString(R.string.PREFERENCES), MODE_PRIVATE));
+//        Toast.makeText(this, "ShakeService Started", Toast.LENGTH_LONG).show();
         return START_STICKY;
     }
 
@@ -77,7 +79,7 @@ public class ShakeService extends Service implements SensorEventListener {
         currentAcceleration = currentAcceleration * 0.9f + m_lastAcceleration * 0.1f;
         m_lastAcceleration = currentAcceleration;
 
-        if ( currentAcceleration > Float.valueOf(getResources().getString(R.string.ACCELERATION_TRIGGER)) ) {
+        if ( currentAcceleration > ShakeServiceSettings.getTriggerStrength() ) {
             if ( m_lastChangeTime < 0 ) {
                 m_lastChangeTime = System.currentTimeMillis();
             }
@@ -92,11 +94,13 @@ public class ShakeService extends Service implements SensorEventListener {
                 }
                 averageShake /= m_accelerationList.size();
 
-                if ( averageShake > Float.valueOf(getResources().getString(R.string.ACCELERATION_STRENGTH)) ) {
-                    Log.i("info", "ShakeService start change brightness");
+                if ( averageShake > ShakeServiceSettings.getAverageStrength() ) {
+                    if ( ShakeServiceSettings.getIsDebugMessages() )
+                        Toast.makeText(this, "Start change brightness", Toast.LENGTH_SHORT).show();
                     ChangeBrightness();
                 } else {
-                    Log.i("info", "Shake harder. " + (Float.valueOf(getResources().getString(R.string.ACCELERATION_STRENGTH)) - averageShake) + " m/s left");
+                    if ( ShakeServiceSettings.getIsDebugMessages() )
+                        Toast.makeText(this, "Shake average strength " + averageShake + "/" + ShakeServiceSettings.getAverageStrength(), Toast.LENGTH_SHORT).show();
                 }
                 m_lastChangeTime = -1;
                 m_accelerationList.clear();
@@ -106,17 +110,7 @@ public class ShakeService extends Service implements SensorEventListener {
 
     public void ChangeBrightness() {
         m_brightness = Utilites.getCurrentBrightness(getContentResolver());
-        m_delay = 100;
-//        m_delay = BrightnessController.changeToValueInTime(0, 60);
-//        m_shouldBeValue = brightness;
-//        m_shoudBeAbsoluteValue = m_shouldBeValue * 255 / 100;
-//
-//        int diff = Math.abs(m_shoudBeAbsoluteValue - m_currentAbsouluteValue);
-//        Log.i("info", "values to change is " + diff);
-//        m_delay = seconds * 1000 / diff;
-//        Log.i("info", "change every Miliseconds " + m_delay);
-//        return m_delay;
-
+        m_delay = 25;
         m_directionUp = (m_brightness <= 10);
         m_direction = 1;
         if ( !m_directionUp ) m_direction = -1;

@@ -1,75 +1,118 @@
 package com.i112358.savemyeyes;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ConfigurationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.net.Uri;
+import android.opengl.GLSurfaceView;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.provider.Settings;
+import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.CompoundButton;
-import android.widget.NumberPicker;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import com.i112358.savemyeyes.Graphics.Line;
+import com.i112358.savemyeyes.Shake.ShakeService;
+import com.i112358.savemyeyes.Shake.ShakeServiceSettings;
+import com.i112358.savemyeyes.Shake.ShakeServiceSettingsActivity;
+
+import java.security.Permissions;
 
 public class MainActivity extends Activity {
+
+    private static final int REQUEST_WRITE_SETTINGS = 0;
+    private View mLayout = null;
 
     public static MainActivity Get() { return activity; }
     private static MainActivity activity;
     private SharedPreferences m_preferences = null;
     private TextView m_brightnessPointsText = null;
-    private Switch m_shakeSwitcher = null;
+    private TextView m_brightnessChangePeriodText = null;
     private Switch m_changeBrightnessSwitcher = null;
+
+    private int m_changeBrightnessPeriod = 0;
 
     public boolean isChangeBrightnessEnable() { return m_isChangeBrightnessEnable; }
     private boolean m_isChangeBrightnessEnable = false;
 
-    public BrightnessPoint getCurrentBrightnessPoint() { return m_currentBrightnessPoint; }
-    public void setCurrentBrightnessPoint() { this.m_currentBrightnessPoint = BrightnessPointManager.getClosestTimePoint(m_preferences); }
-    private BrightnessPoint m_currentBrightnessPoint = null;
+    public BrightnessPoint getNextBrightnessPoint() { return m_nextBrightnessPoint; }
+    public void setNextBrightnessPoint() { this.m_nextBrightnessPoint = BrightnessPointManager.getClosestTimePoint(m_preferences); }
+    private BrightnessPoint m_nextBrightnessPoint = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.w("info", "MainActivity onCreate");
-        setContentView(R.layout.activity_main);
-
-//        Thread.setDefaultUncaughtExceptionHandler();
         activity = this;
+        mLayout = findViewById(R.id.main_layout);
+        setContentView(R.layout.activity_main);
+        Utilites.setDensity(getApplicationContext());
 
         m_preferences = getSharedPreferences(getString(R.string.PREFERENCES), Context.MODE_PRIVATE);
+        Log.i("info", "Settings is " + m_preferences.getAll());
         BrightnessPointManager.loadSavedPoints(m_preferences);
-        ShakeServiceSettings.loadSavedSettings(m_preferences);
-
-        final boolean startShake = m_preferences.getBoolean("shakeServiceStatus", false);
-        m_shakeSwitcher = (Switch)findViewById(R.id.shakeServiceSwitcher);
-        m_shakeSwitcher.setChecked(startShake);
-        m_shakeSwitcher.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                SharedPreferences.Editor editor = m_preferences.edit();
-                editor.putBoolean("shakeServiceStatus", isChecked);
-                editor.apply();
-                changeShakeServiceState(isChecked);
-            }
-        });
-        changeShakeServiceState(startShake);
 
         m_isChangeBrightnessEnable = m_preferences.getBoolean("changeBrightnessStatus", false);
-        m_changeBrightnessSwitcher = (Switch)findViewById(R.id.changeBrightnesSwitcher);
+        m_changeBrightnessSwitcher = (Switch)findViewById(R.id.changeBrightnessSwitcher);
         m_changeBrightnessSwitcher.setChecked(m_isChangeBrightnessEnable);
         m_changeBrightnessSwitcher.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                m_isChangeBrightnessEnable = isChecked;
-                SharedPreferences.Editor editor = m_preferences.edit();
-                editor.putBoolean("changeBrightnessStatus", m_isChangeBrightnessEnable);
-                editor.apply();
                 changeBrightnessState(isChecked);
             }
         });
+
+        m_changeBrightnessPeriod = m_preferences.getInt("changeBrightnessPeriod", 0);
+        m_brightnessChangePeriodText = (TextView)findViewById(R.id.setBRightnessPointSmoothSwitch);
+
+        SeekBar seekBar = (SeekBar)findViewById(R.id.smooth_switcher);
+        seekBar.setMax(290);
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                Log.i("info", "new seconds is " + (progress + 10));
+                m_changeBrightnessPeriod = progress;
+                m_brightnessChangePeriodText.setText("Change in " + (m_changeBrightnessPeriod + 10) + " seconds");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                Log.i("info", "save seconds");
+                SharedPreferences.Editor editor = m_preferences.edit();
+                editor.putInt("changeBrightnessPeriod", m_changeBrightnessPeriod);
+                editor.apply();
+            }
+        });
+        seekBar.setProgress(m_changeBrightnessPeriod);
     }
 
     @Override
@@ -89,15 +132,14 @@ public class MainActivity extends Activity {
 
         int pointsCount = BrightnessPointManager.getPointsCount();
         if ( pointsCount > 0 ) {
-            m_brightnessPointsText.setText(pointsCount + " " + getString(R.string.set_brightness_points_text));
+            m_brightnessPointsText.setText(pointsCount + " " + getString(R.string.main_menu_set_brightness_points_text));
         } else {
             m_brightnessPointsText.setText("Brightness points doesn't exists");
         }
     }
 
     @Override
-    public void onPause()
-    {
+    public void onPause() {
         Log.w("info", "MainActivity onPause");
         super.onPause();
     }
@@ -111,53 +153,50 @@ public class MainActivity extends Activity {
 
     ////////////////////////////////
 
-    private boolean isShakeServiceRunning(Class<ShakeService> serviceClass) {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public void changeBrightnessState( final boolean isStart )
     {
-        Log.i("info", "Start Shake Service");
-        Intent alarmService = new Intent(this, AlarmService.class);
-        alarmService.putExtra("startNextAlarm", isStart);
-        startService(alarmService);
-    }
+        if ( isPermissonGranted() ) {
+            m_isChangeBrightnessEnable = isStart;
+            SharedPreferences.Editor editor = m_preferences.edit();
+            editor.putBoolean("changeBrightnessStatus", m_isChangeBrightnessEnable);
+            editor.apply();
 
-    private void changeShakeServiceState( final boolean isStart )
-    {
-        View shakeSettingsView = findViewById(R.id.shakeSettingsLayout);
-        View space = findViewById(R.id.space_shake_settings);
-        if ( isStart ) {
-            shakeSettingsView.setVisibility(View.VISIBLE);
-            space.setVisibility(View.VISIBLE);
-            if ( !isShakeServiceRunning(ShakeService.class) ) {
-                Log.i("info", "Start Shake Service");
-//                startService(new Intent(this, ShakeService.class));
-            }
-        } else {
-            shakeSettingsView.setVisibility(View.GONE);
-            space.setVisibility(View.GONE);
-            Log.i("info", "Stop Shake Service");
-//            stopService(new Intent(this, ShakeService.class));
+            Intent alarmService = new Intent(this, AlarmService.class);
+            alarmService.putExtra("startScheduledChangeBrightness", isStart);
+            startService(alarmService);
         }
+        m_changeBrightnessSwitcher.setChecked(m_isChangeBrightnessEnable);
     }
 
     public void onViewPointsClick( View view )
     {
-        Intent intent = new Intent(this, SetPointsActivity.class);
-        startActivity(intent);
+        if ( isPermissonGranted() ) {
+            Intent intent = new Intent(this, SetPointsActivity.class);
+            startActivity(intent);
+        }
     }
 
-    public void onShakeSettingsClick( View view )
+    private boolean isPermissonGranted()
     {
-        Log.i("info", "On onShakeSettingsClick");
-        Intent intent = new Intent(this, ShakeServiceSettingsActivity.class);
-        startActivity(intent);
+        boolean isGranted = Utilites.isPermissionGranted(getApplicationContext());
+        if ( !isGranted ) {
+            new AlertDialog.Builder(activity).setMessage("For change screen brightness automatically please grant WRITE SETTINGS permission.")
+                    .setPositiveButton("Grant Permission", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                            intent.setData(Uri.parse("package:" + getPackageName()));
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                            try {
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                Log.e("MainActivity", "error starting permission intent", e);
+                            }
+                        }
+                    })
+                    .show();
+        }
+        return isGranted;
     }
 }

@@ -6,62 +6,55 @@
     android:paddingRight="5dp"
     tools:context=".MainActivity"
     android:id="@+id/main_layout"
-    android:background="#3c3f41">
+    android:background="#BFAA8F"
+    android:addStatesFromChildren="false">
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="10dp" />
 
     <Switch
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:text="@string/shake_service"
-        android:id="@+id/shakeServiceSwitcher"
+        android:id="@+id/changeBrightnessSwitcher"
         android:checked="false"
-        android:layout_marginTop="20dp"
-        android:background="#efe5e5" />
+        android:background="#BFAF96"
+        android:text="@string/main_menu_enable_switcher_text"
+        android:textColor="#1D1626"
+        android:showText="false" />
 
     <Space
         android:layout_width="match_parent"
-        android:layout_height="10dp"
-        android:id="@+id/space_shake_settings" />
+        android:layout_height="10dp" />
 
-    <RelativeLayout
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:clickable="false"
-        android:id="@+id/shakeSettingsLayout"
-        android:background="#efe5e5">
-
-        <Button
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Edit"
-            android:id="@+id/button_shake_settings"
-            android:clickable="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true"
-            android:onClick="onShakeSettingsClick" />
+        android:background="#BFAF96">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="150dp"
             android:layout_height="wrap_content"
-            android:id="@+id/shakeSettingsText"
+            android:text="Change in 10 seconds"
+            android:id="@+id/setBRightnessPointSmoothSwitch"
             android:inputType="none"
-            android:layout_centerVertical="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:text="Shake settings" />
-    </RelativeLayout>
+            android:textColor="#1D1626"
+            android:layout_gravity="center_vertical" />
 
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="10dp" />
+        <Space
+            android:layout_height="match_parent"
+            android:layout_width="10dp" />
 
-    <Switch
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:text="Enable change brightnes"
-        android:id="@+id/changeBrightnesSwitcher"
-        android:checked="false"
-        android:background="#efe5e5" />
+        <SeekBar
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:id="@+id/smooth_switcher"
+            android:indeterminate="false"
+            android:minWidth="100dp"
+            android:layout_gravity="center_horizontal" />
+    </LinearLayout>
 
     <Space
         android:layout_width="match_parent"
@@ -71,30 +64,34 @@
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:clickable="false"
-        android:onClick="onViewPointsClick"
         android:id="@+id/relativeLayout"
-        android:background="#efe5e5">
+        android:background="#BFAF96"
+        android:animationCache="false">
 
         <Button
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Edit"
+            android:text="@string/text_big_edit"
             android:id="@+id/button_edit_points"
             android:clickable="true"
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true"
-            android:onClick="onViewPointsClick" />
+            android:onClick="onViewPointsClick"
+            android:textColor="#1D1626"
+            android:layout_marginRight="3dp"
+            android:fadeScrollbars="false" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/set_brightness_points_text"
+            android:text="@string/main_menu_set_brightness_points_text"
             android:id="@+id/setBrightnessPointsText"
             android:inputType="none"
             android:layout_centerVertical="true"
             android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true" />
+            android:layout_alignParentStart="true"
+            android:textColor="#1D1626" />
     </RelativeLayout>
 
 

@@ -2,42 +2,30 @@ package com.i112358.savemyeyes;
 
 import android.content.SharedPreferences;
 import android.util.Log;
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.sql.Time;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 
-/**
- * Created by i112358 on 10/7/15.
- */
 public class BrightnessPointManager {
-    public static ArrayList<BrightnessPoint> s_brightnessPoints = new ArrayList<BrightnessPoint>();
+    public static ArrayList<BrightnessPoint> s_brightnessPoints = new ArrayList<>();
 
     public static BrightnessPoint getClosestTimePoint( SharedPreferences preferences )
     {
         if ( !loadSavedPoints(preferences) ) {
-            Log.i("info", "no saved points");
+            Log.i("info", "BrightnessPointManager no saved points Line is preferences");
             return null;
         }
 
         if ( s_brightnessPoints.isEmpty() ) {
-            Log.i("info", "List of points is empty");
+            Log.i("info", "BrightnessPointManager List of points is empty");
             return null;
         }
 
         Calendar calendar = Calendar.getInstance();
         int currentTime[] = {calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE)};
-//        int currentTime[] = {14,18};
-        Log.i("info", "Getpoints counter is " + s_brightnessPoints.size());
-        Log.i("info", "Current point time is " + currentTime[0] + ":" + currentTime[1]);
 
         BrightnessPoint pointToUse = null;
         BrightnessPoint lowerPoint = null;
@@ -77,13 +65,10 @@ public class BrightnessPointManager {
         }
 
         if ( pointToUse == null && lowerPoint != null ) {
-            Log.i("info", "Lower point used ");
+            Log.i("info", "BrightnessPointManager Lower point used ");
             pointToUse = lowerPoint;
             pointToUse.setNextDay();
         }
-
-        Log.i("info", "Time will be " + pointToUse.getHour() + ":" + pointToUse.getMinute());
-
         return pointToUse;
     }
 
@@ -97,6 +82,7 @@ public class BrightnessPointManager {
 
     public static void removePoint( final int index )
     {
+        sortPoints();
         s_brightnessPoints.remove(index);
     }
 
@@ -112,13 +98,10 @@ public class BrightnessPointManager {
 
     public static void saveToPreferences( SharedPreferences preferences )
     {
-        Log.i("info", "saveToPreferences counter is " + s_brightnessPoints.size());
-
         SharedPreferences.Editor editor = preferences.edit();
         if ( preferences.contains("brightnessPoints") ) {
             editor.remove("brightnessPoints");
             editor.apply();
-            Log.i("info", "clear saved points");
         }
 
         JSONObject saveJSON = new JSONObject();
@@ -131,7 +114,7 @@ public class BrightnessPointManager {
             }
         }
 
-        Log.i("info", "POINTS Saved" + saveJSON.toString());
+        Log.i("info", "BrightnessPointManager POINTS Saved" + saveJSON.toString());
         editor.putString("brightnessPoints", saveJSON.toString());
         editor.apply();
     }
@@ -140,7 +123,7 @@ public class BrightnessPointManager {
     {
         String loadPoints = preferences.getString("brightnessPoints", "");
         if ( ("").equals(loadPoints) ) {
-            Log.i("info", "no points exists");
+            Log.i("info", "BrightnessPointManager no points exists");
             return false;
         } else {
             s_brightnessPoints.clear();
@@ -170,5 +153,26 @@ public class BrightnessPointManager {
                 return Integer.valueOf(totalP1).compareTo(totalP2);
             }
         });
+    }
+
+    public static int checkIfPointCloseToNeighbor( final int time, BrightnessPoint editPoint )
+    {
+        int limit = 10;
+
+        for ( int i = 0; i < s_brightnessPoints.size(); i++ )
+        {
+            BrightnessPoint point = s_brightnessPoints.get(i);
+            if ( editPoint != null ) {
+                if ( editPoint.equals(point) ) {
+                    continue;
+                }
+            }
+
+            int result = Math.abs(time - point.getAbsoluteValue());
+            if ( result <= limit || result >= 1430 ) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
